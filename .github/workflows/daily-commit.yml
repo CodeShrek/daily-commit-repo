@@ -2,39 +2,38 @@ name: Daily Commit Workflow
 
 on:
   schedule:
-    # Runs daily at 9:30 AM UTC (specific time, not wildcards)
-    - cron: '30 9 * * *'
-  workflow_dispatch: # Allows manual triggering for testing
+    - cron: '30 9 * * *'  # Runs at 9:30 AM UTC daily
+  workflow_dispatch:       # Allows manual triggering
 
 jobs:
   daily-commit:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Required for pushing commits
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0     # Fetches all history for proper git operations
         
     - name: Configure Git for 24f1001929@ds.study.iitm.ac.in
       run: |
-        git config --local user.email "24f1001929@ds.study.iitm.ac.in"
-        git config --local user.name "Daily Commit Bot"
+        git config --global user.email "24f1001929@ds.study.iitm.ac.in"
+        git config --global user.name "Daily Commit Bot"
         
     - name: Create daily commit file
       run: |
-        # Create a logs directory if it doesn't exist
         mkdir -p daily-logs
-        
-        # Create a file with current timestamp
-        echo "Daily commit generated on $(date -u)" > daily-logs/daily-commit-$(date -u +%Y-%m-%d-%H-%M-%S).txt
-        
-        # Add some activity data
-        echo "Workflow run number: ${{ github.run_number }}" >> daily-logs/daily-commit-$(date -u +%Y-%m-%d-%H-%M-%S).txt
-        echo "Repository: ${{ github.repository }}" >> daily-logs/daily-commit-$(date -u +%Y-%m-%d-%H-%M-%S).txt
+        echo "Daily commit generated on $(date -u)" > daily-logs/daily-commit-$(date -u +%Y-%m-%d).txt
+        echo "Workflow run number: ${{ github.run_number }}" >> daily-logs/daily-commit-$(date -u +%Y-%m-%d).txt
         
     - name: Commit and push changes
       run: |
         git add .
-        git commit -m "Daily automated commit - $(date -u +%Y-%m-%d)"
-        git push
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Daily automated commit - $(date -u +%Y-%m-%d)"
+          git push origin HEAD:main
+        fi
